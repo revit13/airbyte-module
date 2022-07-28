@@ -12,6 +12,7 @@ MOUNTDIR = '/local'
 CHUNKSIZE = 1024
 CTRLD = '\x04'.encode()
 
+
 class GenericConnector:
     def __init__(self, config, logger, workdir):
         if 'connection' not in config:
@@ -19,7 +20,8 @@ class GenericConnector:
 
         if 'name' not in config['connection']:
             raise ValueError("the name of the connection is missing")
-        connection_name = config['connection']['name'] # e.g. postgres, google-sheets, us-census
+        # e.g. postgres, google-sheets, us-census
+        connection_name = config['connection']['name']
 
         self.config = config['connection'][connection_name]
         if 'connector' not in self.config:
@@ -33,7 +35,8 @@ class GenericConnector:
             try:
                 self.client = docker.from_env()
             except Exception as e:
-                print('error on docker.from_env() ' + str(e) + ' sleep and retry.  Retry count = ' + str(retryLoop))
+                print('error on docker.from_env() ' + str(e) +
+                      ' sleep and retry.  Retry count = ' + str(retryLoop))
                 time.sleep(1)
                 retryLoop += 1
             else:
@@ -67,6 +70,7 @@ class GenericConnector:
     in the container.
     For instance, it the path is '/tmp/tmp12345', return '/local/tmp12345'.
     '''
+
     def name_in_container(self, path):
         return path.replace(self.workdir, MOUNTDIR, 1)
 
@@ -77,6 +81,7 @@ class GenericConnector:
     extract:
        {"id":1,"col1":"record1"}
     '''
+
     def extract_data(self, line_dict):
         return json.dumps(line_dict['record']['data']).encode('utf-8')
 
@@ -85,26 +90,27 @@ class GenericConnector:
     Relevant lines are JSON-formatted, and have a 'type' field which is
     either 'CATALOG' or 'RECORD'
     '''
+
     def filter_reply(self, lines, batch_size=100):
         count = 0
         for line in lines:
             if count == 0:
                 ret = []
             try:
-               line_dict = json.loads(line)
-               if 'type' in line_dict:
-                   if line_dict['type'] == 'LOG':
-                       continue
-                   if line_dict['type'] == 'CATALOG':
-                       ret.append(line)
-                   elif line_dict['type'] == 'RECORD':
-                       ret.append(self.extract_data(line_dict))
-                   count = count + 1
-               if count == batch_size:
-                   count = 0
-                   yield ret
+                line_dict = json.loads(line)
+                if 'type' in line_dict:
+                    if line_dict['type'] == 'LOG':
+                        continue
+                    if line_dict['type'] == 'CATALOG':
+                        ret.append(line)
+                    elif line_dict['type'] == 'RECORD':
+                        ret.append(self.extract_data(line_dict))
+                    count = count + 1
+                if count == batch_size:
+                    count = 0
+                    yield ret
             finally:
-               continue
+                continue
         if count == 0:
             yield []
         else:
@@ -114,12 +120,13 @@ class GenericConnector:
     Run a docker container from the connector image.
     Mount the workdir on /local. Remove the container after done.
     '''
+
     def run_container(self, command):
         self.logger.debug("running command: " + command)
         try:
             reply = self.client.containers.run(self.connector, command,
-                volumes=[self.workdir + ':' + MOUNTDIR], network_mode='host',
-                remove=True, stream=True)
+                                               volumes=[self.workdir + ':' + MOUNTDIR], network_mode='host',
+                                               remove=True, stream=True)
             return self.filter_reply(reply)
         except docker.errors.DockerException as e:
             self.logger.error('Running of docker container failed',
@@ -128,11 +135,13 @@ class GenericConnector:
 
     def open_socket_to_container(self, command):
         container = self.client.containers.run(self.connector, detach=True,
-                             tty=True, stdin_open=True,
-                             volumes=[self.workdir + ':' + MOUNTDIR],
-                             command=command, remove=True)
+                                               tty=True, stdin_open=True,
+                                               volumes=[
+                                                   self.workdir + ':' + MOUNTDIR],
+                                               command=command, remove=True)
         # attach to the container stdin socket
-        s = container.attach_socket(params={'stdin': 1, 'stream': 1, 'stdout': 1, 'stderr': 1})
+        s = container.attach_socket(
+            params={'stdin': 1, 'stream': 1, 'stdout': 1, 'stderr': 1})
         s._sock.setblocking(True)
         return s, container
 
@@ -154,7 +163,7 @@ class GenericConnector:
         return ret
 
     translate = {
-        'number': 'DOUBLE', # Number may be an integer or a double. We play it safe
+        'number': 'DOUBLE',  # Number may be an integer or a double. We play it safe
         'string': 'STRING',
     }
 
@@ -163,6 +172,7 @@ class GenericConnector:
     Used by arrow-flight server for both the get_flight_info() and do_get().
     Not needed for the Airbyte http server.
     '''
+
     def get_schema(self):
         self.get_catalog_dict()
         if self.catalog_dict == None:
@@ -182,6 +192,7 @@ class GenericConnector:
     '''
     run the Airbyte read operation to obtain all datasets
     '''
+
     def read_stream(self, catalog_file):
         # step 1: construct the ConfiguredAirbyteCatalog structure,
         #         for an Airbyte read operation
@@ -206,14 +217,15 @@ class GenericConnector:
 
         # step 3: Run the Airbyte read operation to read the datasets
         return self.run_container('read --config '
-                      + self.name_in_container(self.conf_file.name)
-                      + ' --catalog '
-                      + self.name_in_container(catalog_file.name))
+                                  + self.name_in_container(self.conf_file.name)
+                                  + ' --catalog '
+                                  + self.name_in_container(catalog_file.name))
 
     '''
     Obtain an AirbyteCatalog json structure, and translate it to a dictionary.
     Store this dictionary in self.catalog_dict
     '''
+
     def get_catalog_dict(self):
         # if self.catalog_dict is already populated, no need to do anything
         if self.catalog_dict:
@@ -225,7 +237,8 @@ class GenericConnector:
             return
 
         if len(airbyte_catalog) != 1:
-            self.logger.error('Received more than a single response line from connector.')
+            self.logger.error(
+                'Received more than a single response line from connector.')
             return
 
         try:
@@ -238,6 +251,7 @@ class GenericConnector:
     To obtain a dataset, obtain an AirbyteCatalog json structure,
     and use it to for an Airbyte read operation.
     '''
+
     def get_dataset(self):
         # step 1: obtain an AirbyteCatalog json structure
         self.get_catalog_dict()
@@ -253,6 +267,7 @@ class GenericConnector:
     Transform this array into a pyarrow Table. In order to do that,
     temporarily write the JSON lines to file.
     '''
+
     def get_dataset_batches(self, schema):
         batches = self.get_dataset()
         for batch in batches:
@@ -262,11 +277,12 @@ class GenericConnector:
                         dataset_file.write(line)
                     dataset_file.flush()
                     yield pa_json.read_json(dataset_file.name,
-                                      parse_options=pa_json.ParseOptions(schema))
+                                            parse_options=pa_json.ParseOptions(schema))
 
     '''
     Creates a template catalog for write connectors
     '''
+
     def create_write_catalog(self, stream_name='testing'):
         template = '{ \
         "streams": [{ \
@@ -294,21 +310,49 @@ class GenericConnector:
 
     def write_dataset(self, fptr, length):
         self.logger.debug('write requested')
+        print("jj1")
         # The catalog to be provided to the write command is from a template -
         # there is no discover on the write
         tmp_catalog = self.create_write_catalog()
+        print("jj2")
 
         command = 'write --config ' + self.name_in_container(self.conf_file.name) + \
                   ' --catalog ' + self.name_in_container(tmp_catalog.name)
         s, container = self.open_socket_to_container(command)
-
+        print("jj3")
         # eg echo payload | docker run -v /Users/eliot/temp:/local -i airbyte/destination-local-json write --catalog /local/airbyte_catalog.txt --config /local/airbyte_write1.json
         bytesToWrite = length
+        print("jj5")
         while bytesToWrite > 0:
-            readSize = CHUNKSIZE if (bytesToWrite - CHUNKSIZE) >= 0 else bytesToWrite
+            readSize = CHUNKSIZE if (
+                bytesToWrite - CHUNKSIZE) >= 0 else bytesToWrite
             bytesToWrite -= readSize
+            print("jj7")
             payload = fptr.read(int(readSize))
+            print("jj6")
             self.write_to_socket_to_container(s, payload)
+        self.close_socket_to_container(s, container)
+        tmp_catalog.close()
+        # TODO: Need to figure out how to handle error return
+        return True
+
+    def write_dataset_bytes(self, bytes):
+        self.logger.debug('write bytes requested')
+        print("jj1")
+        # The catalog to be provided to the write command is from a template -
+        # there is no discover on the write
+        tmp_catalog = self.create_write_catalog()
+        print("jj2")
+
+        command = 'write --config ' + self.name_in_container(self.conf_file.name) + \
+                  ' --catalog ' + self.name_in_container(tmp_catalog.name)
+        s, container = self.open_socket_to_container(command)
+        print("jj3")
+        # eg echo payload | docker run -v /Users/eliot/temp:/local -i airbyte/destination-local-json write --catalog /local/airbyte_catalog.txt --config /local/airbyte_write1.json
+
+        self.write_to_socket_to_container(s, b'a\xc3\xa5b\xe2\x88\xabc\xc3\xa7d\xe2\x88\x82e\xc2\xb4\xc2\xb4\xc2\xb4\xc6\x92g\xc2\xa91\xc2\xa1')
+        print("jj5")
+
         self.close_socket_to_container(s, container)
         tmp_catalog.close()
         # TODO: Need to figure out how to handle error return

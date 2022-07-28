@@ -13,6 +13,9 @@ import os
 import socketserver
 from http import HTTPStatus
 import pyarrow.flight as fl
+import pyarrow.dataset as ds
+import pandas as pd
+import pickle
 
 class ABMHttpHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, request, client_address, server):
@@ -169,6 +172,28 @@ class ABMFlightServer(fl.FlightServerBase):
 
         endpoints = self._get_endpoints(tickets, locations)
         return fl.FlightInfo(schema, descriptor, endpoints, -1, -1)
+
+    def do_put(self, context, descriptor, reader, writer):
+        print("hi")
+        asset_name = json.loads(descriptor.command)['asset']
+        print("hi2")
+        logger.info('getting flight information',
+            extra={'command': descriptor.command,
+                   DataSetID: asset_name,
+                   ForUser: True})
+        print("hi3")
+        with Config(self.config_path) as config:
+            asset_conf = config.for_asset(asset_name)
+            print("hi4")
+            connector = GenericConnector(asset_conf, logger, self.workdir)
+            print("hi5")
+            read_pandas = reader.read_pandas()
+            df_byte = read_pandas.to_json().encode()
+            print("hi6")
+            print("hi7")
+            f = open("./dummy.pkl", "r")
+            connector.write_dataset_bytes(df_byte)
+
 
 class ABMServer():
     def __init__(self, config_path: str, port: int, loglevel: str, workdir: str, *args, **kwargs):
