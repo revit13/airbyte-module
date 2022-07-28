@@ -191,7 +191,6 @@ class ABMFlightServer(fl.FlightServerBase):
             df_byte = read_pandas.to_json().encode()
             print("hi6")
             print("hi7")
-            f = open("./dummy.pkl", "r")
             connector.write_dataset_bytes(df_byte)
 
 
