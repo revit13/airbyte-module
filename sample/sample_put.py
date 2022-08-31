@@ -24,14 +24,41 @@ class HttpBasicClientAuthHandler(fl.ClientAuthHandler):
         return self.token
 
 request = {
-    "asset": "write_test",
-}
+    "asset": "userdata",
+    "schema": '{ \
+        "streams": [{ \
+                "sync_mode": "full_refresh", \
+                "destination_sync_mode": "overwrite", \
+                "stream": { \
+                        "name": "revital76", \
+                        "json_schema": { \
+                            "$schema": "http://json-schema.org/draft-07/schema#", \
+                            "type": "object", \
+                            "properties": { \
+                                "DOB": { \
+                                    "type": "string" \
+                                }, \
+                                "FirstName": { \
+                                    "type": "string" \
+                                }, \
+                                "LastNAME": { \
+                                    "type": "string" \
+                                } \
+                            } \
+                        }, \
+                        "supported_sync_modes": [ \
+                                "full_refresh" \
+                        ] \
+                } \
+            }] \
+        }'
+    }
 
 def main(port):
     client = fl.connect("grpc://localhost:{}".format(port))
-    arrays = [["RECORD", "RECORD", "RECORD"], [{"stream": "testing","data": {"DOB": "01/02/1992", "FirstName": "John", "LastNAME":"Jones"}, "emitted_at": 0},
-                                     {"stream": "testing","data": {"DOB": "01/02/1994", "FirstName": "Ludwig", "LastNAME":"Beethoven"}, "emitted_at": 0},
-                                     {"stream": "testing","data": {"DOB": "01/02/1995", "FirstName": "Frank", "LastNAME":"Sinatra"}, "emitted_at": 0}]]
+    arrays = [["RECORD", "RECORD", "RECORD"], [{"stream": "revital76","data": {"DOB": "01/02/1992", "FirstName": "John", "LastNAME":"JonesMEME"}, "emitted_at": 0},
+                                     {"stream": "revital76","data": {"DOB": "01/02/1994", "FirstName": "Ludwig", "LastNAME":"Beethoven"}, "emitted_at": 0},
+                                     {"stream": "revital76","data": {"DOB": "01/02/1995", "FirstName": "Frank", "LastNAME":"Sinatra"}, "emitted_at": 0}]]
     names = ["type", "record"]
     data = pa.Table.from_arrays(arrays, names=names)
     writer, _ = client.do_put(fl.FlightDescriptor.for_command(json.dumps(request)),

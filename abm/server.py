@@ -10,6 +10,7 @@ from .ticket import ABMTicket
 import http.server
 import json
 import os
+import json as simplejson
 import socketserver
 from http import HTTPStatus
 import pyarrow.flight as fl
@@ -52,8 +53,14 @@ class ABMHttpHandler(http.server.SimpleHTTPRequestHandler):
 
 # Have the same routine for PUT and POST
     def do_WRITE(self):
-        logger.info('write requested')
-        with Config(self.config_path) as config:
+        self.data_string = self.rfile.read(int(self.headers['Content-Length']))
+        print("hello")
+        print(self.data_string)
+        json_file = simplejson.loads(self.data_string)
+        data = json.dumps(json_file['data'])
+        schema = json.dumps(json_file['schema'])
+        print("DATA" + data)
+        with Config(self.config_path) as config:           
             asset_name = self.path.lstrip('/')
             try:
                 asset_conf = config.for_asset(asset_name)
@@ -65,8 +72,8 @@ class ABMHttpHandler(http.server.SimpleHTTPRequestHandler):
                 return
             # Change to allow for streaming reads
             read_length = self.headers.get('Content-Length')
-            if connector.write_dataset(self.rfile, int(read_length)):
-                self.send_response(HTTPStatus.OK)
+            if connector.write_dataset(data, schema):
+               self.send_response(HTTPStatus.OK)
             else:
                 self.send_response(HTTPStatus.BAD_REQUEST)
             self.end_headers()
@@ -150,6 +157,7 @@ class ABMFlightServer(fl.FlightServerBase):
     '''
     def do_put(self, context, descriptor, reader, writer):
         asset_name = json.loads(descriptor.command)['asset']
+        schema = json.loads(descriptor.command)['schema']
         logger.info('getting flight information',
             extra={'command': descriptor.command,
                    DataSetID: asset_name,
@@ -161,7 +169,7 @@ class ABMFlightServer(fl.FlightServerBase):
             batches = reader.read_all().combine_chunks().to_batches(max_chunksize=1)
             for batch in batches:
                 df_bytes.append(batch.to_pandas().to_json(orient='records').encode())
-            connector.write_dataset_bytes(df_bytes, True)
+            connector.write_dataset_bytes(df_bytes, schema, True)
 
     '''
     Serve arrow-flight get_flight_info requests.
@@ -190,9 +198,11 @@ class ABMFlightServer(fl.FlightServerBase):
 
 class ABMServer():
     def __init__(self, config_path: str, port: int, loglevel: str, workdir: str, *args, **kwargs):
+        print("revital port " + str(8085))
         with Config(config_path) as config:
             init_logger(loglevel, config.app_uuid, 'airbyte-module')
 
+        print("port " + str(8085))
         server = ABMHttpServer(("0.0.0.0", port), ABMHttpHandler,
                                config_path, workdir)
         server.serve_forever()
