@@ -150,6 +150,7 @@ class ABMFlightServer(fl.FlightServerBase):
     '''
     def do_put(self, context, descriptor, reader, writer):
         asset_name = json.loads(descriptor.command)['asset']
+        schema = json.loads(descriptor.command)['schema']
         logger.info('getting flight information',
             extra={'command': descriptor.command,
                    DataSetID: asset_name,
@@ -161,7 +162,7 @@ class ABMFlightServer(fl.FlightServerBase):
             batches = reader.read_all().combine_chunks().to_batches(max_chunksize=1)
             for batch in batches:
                 df_bytes.append(batch.to_pandas().to_json(orient='records').encode())
-            connector.write_dataset_bytes(df_bytes, True)
+            connector.write_dataset_bytes(df_bytes, schema, True)
 
     '''
     Serve arrow-flight get_flight_info requests.

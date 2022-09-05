@@ -305,11 +305,13 @@ class GenericConnector:
         # TODO: Need to figure out how to handle error return
         return True
 
-    def write_dataset_bytes(self, bytes, reformat=False):
+    def write_dataset_bytes(self, bytes, schema='', reformat=False):
         self.logger.debug('write bytes requested')
         # The catalog to be provided to the write command is from a template -
         # there is no discover on the write
-        tmp_catalog = self.create_write_catalog()
+        tmp_catalog = tempfile.NamedTemporaryFile(dir=self.workdir, mode='w+t')
+        tmp_catalog.writelines(schema)
+        tmp_catalog.flush()
 
         command = 'write --config ' + self.name_in_container(self.conf_file.name) + \
                   ' --catalog ' + self.name_in_container(tmp_catalog.name)
