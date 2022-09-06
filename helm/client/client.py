@@ -28,7 +28,7 @@ def main(host, port, asset, operation):
           fl.FlightDescriptor.for_command(json.dumps(request)))
 
       read_dataset()
-    else:
+    elif operation == "put":
       request = {
         "asset": asset,
         "schema": '{ \
@@ -66,6 +66,8 @@ def main(host, port, asset, operation):
                                data.schema)
       writer.write_table(data, 1024)
       writer.close()
+    else:
+      print("Unsupported operation. should be get or put")
 
 
 if __name__ == "__main__":
