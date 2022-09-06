@@ -326,3 +326,20 @@ class GenericConnector:
         tmp_catalog.close()
         # TODO: Need to figure out how to handle error return
         return True
+
+    def write_dataset_new(self, data, schema):
+        # eg echo payload | docker run -v /Users/eliot/temp:/local -i airbyte/destination-local-json write --catalog /local/airbyte_catalog.txt --config /local/airbyte_write1.json
+        tmp_catalog = tempfile.NamedTemporaryFile(dir=self.workdir, mode='w+t')
+        tmp_catalog.writelines(schema)
+        tmp_catalog.flush()
+        command = 'write --config ' + self.name_in_container(self.conf_file.name) + \
+                  ' --catalog ' + self.name_in_container(tmp_catalog.name)
+        s, container = self.open_socket_to_container(command)
+        print("data in write_dataset" + data)
+        bytes = json.dumps(data, indent = 4).encode()
+        bytes = bytes[1:-1] + b'\n'
+        self.write_to_socket_to_container(s,  bytes)
+        self.close_socket_to_container(s, container)
+        tmp_catalog.close()
+        # TODO: Need to figure out how to handle error return
+        return True
