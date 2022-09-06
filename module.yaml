@@ -97,19 +97,19 @@ spec:
             port: "79"
             scheme: grpc
       supportedInterfaces:
-        - source:
+        - sink:
             protocol: postgres
             dataformat: csv
-        - source:
+        - sink:
             protocol: mysql
             dataformat: csv
-        - source:
+        - sink:
             protocol: google-sheets
             dataformat: csv
-        - source:
+        - sink:
             protocol: us-census
             dataformat: csv
-        - source:
+        - sink:
             protocol: file
             dataformat: csv
 
