@@ -119,7 +119,7 @@ class GenericConnector:
         try:
             reply = self.client.containers.run(self.connector, command,
                 volumes=[self.workdir + ':' + MOUNTDIR], network_mode='host',
-                remove=True, stream=True)
+                remove=False, stream=True)
             return self.filter_reply(reply)
         except docker.errors.DockerException as e:
             self.logger.error('Running of docker container failed',
@@ -130,7 +130,7 @@ class GenericConnector:
         container = self.client.containers.run(self.connector, detach=True,
                              tty=True, stdin_open=True,
                              volumes=[self.workdir + ':' + MOUNTDIR],
-                             command=command, remove=True)
+                             command=command, remove=False)
         # attach to the container stdin socket
         s = container.attach_socket(params={'stdin': 1, 'stream': 1, 'stdout': 1, 'stderr': 1})
         s._sock.setblocking(True)
