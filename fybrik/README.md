@@ -78,11 +78,13 @@ Repeat steps 1-5 above.
    kubectl get pods -n fybrik-blueprints
    ```
 
-1. To verify that the Airbyte module gives access to the `userdata` dataset, run:
+1. To verify that the Airbyte module writes the dataset, run:
    ```bash
    cd $AIRBYTE_MODULE_DIR/helm/client
    ./deploy_airbyte_module_client_pod.sh
    kubectl exec -it my-shell -n default -- python3 /root/client.py --host my-app-fybrik-airbyte-sample-airbyte-module.fybrik-blueprints --port 80 --asset fybrik-airbyte-sample/userdata --operation put
+   export AIRBYTE_POD_NAME=$(kubectl get pods -n fybrik-blueprints | grep airbyte |awk '{print $1}')
+   kubectl exec $AIRBYTE_POD_NAME -n fybrik-blueprints -- cat /local/airbyte_out/_airbyte_raw_testing.jsonl
    ```
 
 
