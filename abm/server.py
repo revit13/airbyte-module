@@ -54,12 +54,10 @@ class ABMHttpHandler(http.server.SimpleHTTPRequestHandler):
 # Have the same routine for PUT and POST
     def do_WRITE(self):
         self.data_string = self.rfile.read(int(self.headers['Content-Length']))
-        print("hello")
         print(self.data_string)
         json_file = simplejson.loads(self.data_string)
         data = json.dumps(json_file['data'])
         schema = json.dumps(json_file['schema'])
-        print("DATA" + data)
         with Config(self.config_path) as config:
             asset_name = self.path.lstrip('/')
             try:
@@ -72,7 +70,7 @@ class ABMHttpHandler(http.server.SimpleHTTPRequestHandler):
                 return
             # Change to allow for streaming reads
             read_length = self.headers.get('Content-Length')
-            if connector.write_dataset_new(data, schema):
+            if connector.write_dataset_json(data, schema):
                self.send_response(HTTPStatus.OK)
             else:
                 self.send_response(HTTPStatus.BAD_REQUEST)
