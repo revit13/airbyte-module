@@ -7,13 +7,15 @@ import json
 import tempfile
 import pyarrow as pa
 from pyarrow import json as pa_json
+from abm.utils.vault import get_credentials_from_vault
 
 MOUNTDIR = '/local'
 CHUNKSIZE = 1024
 CTRLD = '\x04'.encode()
 
 class GenericConnector:
-    def __init__(self, config, logger, workdir):
+    def __init__(self, config, logger, workdir, operation):
+        self.logger = logger
         if 'connection' not in config:
             raise ValueError("'connection' field missing from configuration")
 
@@ -21,9 +23,22 @@ class GenericConnector:
             raise ValueError("the name of the connection is missing")
         connection_name = config['connection']['name'] # e.g. postgres, google-sheets, us-census
 
+        vault = config['vault']
+        dataset_id = config['name']
+
         self.config = config['connection'][connection_name]
         if 'connector' not in self.config:
             raise ValueError("'connector' field missing from configuration")
+
+        if 'access_key_id' in self.config or 'secret_access_key' in self.config:
+            self.logger.debug('looking for access_key_id and secret_access_key')
+
+            access_key, secret_key = get_credentials_from_vault(
+                vault[operation], dataset_id)
+            if access_key == "" or secret_key == "":
+                raise ValueError("Error getting access_key or secret_key from vault")
+            config['access_key_id'] = access_key
+            config['secret_access_key'] = secret_key
 
         self.workdir = workdir
         # Potentially the fybrik-blueprint pod for the airbyte module can start before the docker daemon pod, causing
@@ -46,8 +61,7 @@ class GenericConnector:
         # since the Airbyte connectors do not recognize this field
         del self.config['connector']
 
-        self.logger = logger
-
+        self.logger.debug('GenericConnector: self.config = ' + str(self.config))
         # if the port field is a string, cast it to integer
         if 'port' in self.config and type(self.config['port']) == str:
             self.config['port'] = int(self.config['port'])

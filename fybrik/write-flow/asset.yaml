@@ -4,14 +4,24 @@ metadata:
   name: userdata
 spec:
   secretRef: 
-    name: fake-secret
+    name: paysim-csv
   details:
     dataFormat: csv
     connection:
-      name: file
-      file:
-        connector: airbyte/destination-local-json
-        destination_path: airbyte_out
+      name: s3
+      s3:
+        connector: airbyte/destination-s3
+        format:
+          flattening: No flattening
+          format_type: CSV
+        s3_bucket_name: test-13-9
+        s3_bucket_path: ""
+        s3_bucket_region: ""
+        s3_endpoint: https://s3.us-east.cloud-object-storage.appdomain.cloud
+        s3_path_format: ${NAMESPACE}/${YEAR}_${MONTH}_${DAY}_${EPOCH}_
+        access_key_id: ""
+        secret_access_key: ""
+
   metadata:
     name: test data
     geography: theshire 
