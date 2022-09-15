@@ -12,8 +12,10 @@ spec:
       s3:
         connector: airbyte/destination-s3
         format:
-          flattening: No flattening
+          flattening: Root level flattening
           format_type: CSV
+          compression:
+            compression_type: No Compression
         s3_bucket_name: test-13-9
         s3_bucket_path: ""
         s3_bucket_region: ""
