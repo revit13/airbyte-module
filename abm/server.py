@@ -54,7 +54,13 @@ class ABMHttpHandler(http.server.SimpleHTTPRequestHandler):
     # Have the same routine for PUT and POST
     def do_WRITE(self):
         logger.info('http write requested')
-        schema = json.dumps(json.loads(self.headers['schema']))
+        if 'schema' in self.headers:
+            schema = json.dumps(json.loads(self.headers['schema']))
+        else:
+            logger.error('schema not found in header')
+            self.send_response(HTTPStatus.NOT_FOUND)
+            self.end_headers()
+            return
         with Config(self.config_path) as config:
             asset_name = self.path.lstrip('/')
             try:
@@ -150,8 +156,18 @@ class ABMFlightServer(fl.FlightServerBase):
     Serve arrow flight do_put requests
     '''
     def do_put(self, context, descriptor, reader, writer):
-        asset_name = json.loads(descriptor.command)['asset']
-        schema = json.loads(descriptor.command)['schema']
+        request_map = json.loads(descriptor.command)
+        
+        if 'asset' in request_map:
+            asset_name = request_map['asset']
+        else:
+            logger.error("asset is missing")
+            raise ValueError("asset is missing")
+        if 'schema' in request_map:
+           schema = request_map['schema']
+        else:
+          logger.error("schema is missing")
+          raise ValueError("schema is missing")
         logger.info('getting flight information',
             extra={'command': descriptor.command,
                    DataSetID: asset_name,
