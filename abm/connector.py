@@ -2,6 +2,7 @@
 # Copyright 2022 IBM Corp.
 # SPDX-License-Identifier: Apache-2.0
 #
+from multiprocessing.connection import wait
 import docker
 import json
 import tempfile
@@ -116,10 +117,11 @@ class GenericConnector:
     '''
     def run_container(self, command):
         self.logger.debug("running command: " + command)
+        print ("running command: " + command)
         try:
             reply = self.client.containers.run(self.connector, command,
                 volumes=[self.workdir + ':' + MOUNTDIR], network_mode='host',
-                remove=True, stream=True)
+                remove=False, stream=True)
             return self.filter_reply(reply)
         except docker.errors.DockerException as e:
             self.logger.error('Running of docker container failed',
@@ -127,10 +129,11 @@ class GenericConnector:
             return None
 
     def open_socket_to_container(self, command):
+        print("running command: " + command)
         container = self.client.containers.run(self.connector, detach=True,
                              tty=True, stdin_open=True,
                              volumes=[self.workdir + ':' + MOUNTDIR],
-                             command=command, remove=True)
+                             command=command, remove=False)
         # attach to the container stdin socket
         s = container.attach_socket(params={'stdin': 1, 'stream': 1, 'stdout': 1, 'stderr': 1})
         s._sock.setblocking(True)
@@ -268,7 +271,7 @@ class GenericConnector:
     Creates a template catalog for write connectors
     '''
     def create_write_catalog(self, schema):
-        tmp_catalog = tempfile.NamedTemporaryFile(dir=self.workdir, mode='w+t')
+        tmp_catalog = tempfile.NamedTemporaryFile(dir=self.workdir, mode='w+t', delete=False)
         tmp_catalog.writelines(schema)
         tmp_catalog.flush()
         return tmp_catalog
@@ -303,7 +306,7 @@ class GenericConnector:
             bytesToWrite -= readSize
             payload = fptr.read(int(readSize))
             self.write_to_socket_to_container(s, payload)
-        self.close_socket_to_container(s, container)
+        #self.close_socket_to_container(s, container)
         tmp_catalog.close()
         # TODO: Need to figure out how to handle error return
         return True
@@ -315,5 +318,6 @@ class GenericConnector:
         record = bytes + b'\n'
         self.write_to_socket_to_container(socket, record)
         # TODO: Need to figure out how to handle error return
+        wait
         return True
 

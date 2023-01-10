@@ -5,6 +5,23 @@
 import pyarrow.flight as fl
 import pyarrow as pa
 import json
+from faker import Faker
+
+
+
+def fake_dataset(num_entries):
+        Faker.seed(1234)
+        f = Faker()
+        arrays = []
+        column_names = []
+
+        arr = []
+        for i in range(num_entries):
+           arr.append(f.name())
+        arrays.append(arr)
+        column_names.append("Name")
+
+        return arrays, column_names
 
 # taken from https://github.com/apache/arrow/blob/master/python/pyarrow/tests/test_flight.py#L450
 class HttpBasicClientAuthHandler(fl.ClientAuthHandler):
@@ -19,47 +36,21 @@ class HttpBasicClientAuthHandler(fl.ClientAuthHandler):
         auth = self.basic_auth.serialize()
         outgoing.write(auth)
         self.token = incoming.read()
-
+        
     def get_token(self):
         return self.token
 
+
 request = {
     "asset": "write_test",
-    "schema": '{ \
-        "streams": [{ \
-                "sync_mode": "full_refresh", \
-                "destination_sync_mode": "overwrite", \
-                "stream": { \
-                        "name": "testing", \
-                        "json_schema": { \
-                            "$schema": "http://json-schema.org/draft-07/schema#", \
-                            "type": "object", \
-                            "properties": { \
-                                "DOB": { \
-                                    "type": "string" \
-                                }, \
-                                "FirstName": { \
-                                    "type": "string" \
-                                }, \
-                                "LastNAME": { \
-                                    "type": "string" \
-                                } \
-                            } \
-                        }, \
-                        "supported_sync_modes": [ \
-                                "full_refresh" \
-                        ] \
-                } \
-            }] \
-        }'
-}
+    "schema":  '{"streams": [{"sync_mode": "full_refresh",  "destination_sync_mode": "overwrite", "stream": {"supported_sync_modes": ["full_refresh"], "name": "testing", "json_schema": {"type": "object",  "properties": {"Name": { "type": "string"  }}}}}]}'
+  }
 
 def main(port):
     client = fl.connect("grpc://localhost:{}".format(port))
-    arrays = [["RECORD", "RECORD", "RECORD"], [{"stream": "testing","data": {"DOB": "01/02/1992", "FirstName": "John", "LastNAME":"Jones"}, "emitted_at": 0},
-                                     {"stream": "testing","data": {"DOB": "01/02/1994", "FirstName": "Ludwig", "LastNAME":"Beethoven"}, "emitted_at": 0},
-                                     {"stream": "testing","data": {"DOB": "01/02/1995", "FirstName": "Frank", "LastNAME":"Sinatra"}, "emitted_at": 0}]]
-    names = ["type", "record"]
+    # write the new dataset
+    arrays, names = fake_dataset(1)
+
     data = pa.Table.from_arrays(arrays, names=names)
     writer, _ = client.do_put(fl.FlightDescriptor.for_command(json.dumps(request)),
                               data.schema)

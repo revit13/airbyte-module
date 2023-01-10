@@ -13,7 +13,11 @@ import json as simplejson
 import os
 import socketserver
 from http import HTTPStatus
+import pandas as pd
 import pyarrow.flight as fl
+from airbyte_cdk.models import AirbyteMessage, AirbyteRecordMessage
+from airbyte_cdk.models import Type as MessageType
+from typing import Any, Dict, Iterable, List, Mapping, Union
 
 class ABMHttpHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, request, client_address, server):
@@ -172,11 +176,25 @@ class ABMFlightServer(fl.FlightServerBase):
             command, catalog = connector.create_write_command(schema)
             socket, container = connector.open_socket_to_container(command)
             idx = 0
+            # convert from arrow format to Airbyte format
             record_reader = reader.to_reader()
             while True:
                 try:
                   batch = record_reader.read_next_batch()
-                  connector.write_dataset_bytes(socket, batch.to_pandas().to_json(orient='records', lines=True).encode())
+                  df = batch.to_pandas()
+                  #for row in df.iterrows():
+                    #print(row.to_json())
+
+                  
+
+                  #connector.write_dataset_bytes(socket, .encode())
+                  arb = []
+                  for _, row in df.iterrows():
+                    print(row.to_json()) 
+                    arb.append(AirbyteMessage(type=MessageType.RECORD, record=AirbyteRecordMessage(stream="testing", data=row, emitted_at=111)).json())
+                  print(json.dumps(arb))
+                  connector.write_dataset_bytes(socket, json.dumps(arb).encode())
+                  print("hi"+str(idx))
                   idx += 1
                 except StopIteration:
                     logger.info('total number of chunks read:' + str(idx))
@@ -184,7 +202,7 @@ class ABMFlightServer(fl.FlightServerBase):
                 except BaseException as err:
                     logger.error(f"Unexpected {err=}, {type(err)=}")
                     raise
-            connector.close_socket_to_container(socket, container)
+            #connector.close_socket_to_container(socket, container)
             catalog.close()
             
 
