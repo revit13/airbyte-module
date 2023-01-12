@@ -11,6 +11,7 @@ import http.server
 import json
 import json as simplejson
 import os
+import io
 import socketserver
 from http import HTTPStatus
 import pandas as pd
@@ -183,17 +184,19 @@ class ABMFlightServer(fl.FlightServerBase):
                   batch = record_reader.read_next_batch()
                   df = batch.to_pandas()
                   #for row in df.iterrows():
-                    #print(row.to_json())
-
-                  
+                    #print(row.to_json())                
 
                   #connector.write_dataset_bytes(socket, .encode())
                   arb = []
                   for _, row in df.iterrows():
                     print(row.to_json()) 
-                    arb.append(AirbyteMessage(type=MessageType.RECORD, record=AirbyteRecordMessage(stream="testing", data=row, emitted_at=111)).json())
-                  print(json.dumps(arb))
-                  connector.write_dataset_bytes(socket, json.dumps(arb).encode())
+                    record_message=AirbyteMessage(type=MessageType.RECORD, record=AirbyteRecordMessage(stream="testing", data=row, emitted_at=111)).json()
+                    #kk=json.JSONEncoder.default(self, AirbyteMessage(type=MessageType.RECORD, record=AirbyteRecordMessage(stream="testing", data=row, emitted_at=111)).json())
+                    #connector.write_dataset_bytes(socket, io.StringIO(record_message))
+                    connector.write_dataset_bytes(socket,json.dumps(record_message).encode('utf-8'))
+                    #arb.append(AirbyteMessage(type=MessageType.RECORD, record=AirbyteRecordMessage(stream="testing", data=row, emitted_at=111)).json())
+                  #print(json.dumps(arb))
+                  #connector.write_dataset_bytes(socket, json.dumps(arb).encode('utf-8'))
                   print("hi"+str(idx))
                   idx += 1
                 except StopIteration:

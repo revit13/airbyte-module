@@ -49,7 +49,7 @@ request = {
 def main(port):
     client = fl.connect("grpc://localhost:{}".format(port))
     # write the new dataset
-    arrays, names = fake_dataset(1)
+    arrays, names = fake_dataset(2)
 
     data = pa.Table.from_arrays(arrays, names=names)
     writer, _ = client.do_put(fl.FlightDescriptor.for_command(json.dumps(request)),

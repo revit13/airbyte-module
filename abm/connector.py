@@ -56,7 +56,7 @@ class GenericConnector:
         self.catalog_dict = None
 
         # create the temporary json file for configuration
-        self.conf_file = tempfile.NamedTemporaryFile(dir=self.workdir)
+        self.conf_file = tempfile.NamedTemporaryFile(dir=self.workdir, delete=False)
         self.conf_file.write(json.dumps(self.config).encode('utf-8'))
         self.conf_file.flush()
 
