@@ -18,7 +18,7 @@ TEMP := /tmp
 CHART_LOCAL_PATH ?= helm/abm
 CHART_NAME ?= airbyte-module-chart
 HELM_RELEASE ?= rel1-${DOCKER_NAME}
-HELM_TAG ?= 0.0.0
+HELM_TAG ?= 0.0.99
 
 CHART_REGISTRY_PATH := oci://${DOCKER_HOSTNAME}/${DOCKER_NAMESPACE}
 

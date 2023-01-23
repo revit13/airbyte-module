@@ -29,9 +29,13 @@ class GenericConnector:
         if 'vault_credentials' in config:
             vault_credentials = config['vault_credentials']
             secrets = get_secrets_from_vault(vault_credentials=vault_credentials, datasetID=asset_name)
+            print("llllll")
+            print(secrets)
             if secrets:
                 # merge config with secrets returned by vault
                 self.config = dict(self.config, **secrets)
+                print("secrets!!!fffff")
+                print(self.config)
             else:
                 logger.info("no secrets returned by vault")
 

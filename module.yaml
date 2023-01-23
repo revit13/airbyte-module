@@ -8,9 +8,9 @@ metadata:
 spec:
   type: service
   chart:
-    name: ghcr.io/fybrik/airbyte-module-chart:0.0.0-main
+    name: ghcr.io/revit13/airbyte-module-chart:0.0.99
     values:
-      image.tag: main
+      image.tag: 0.0.99
   capabilities:
     - capability: read
       scope: workload
